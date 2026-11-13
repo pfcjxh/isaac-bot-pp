@@ -107,7 +107,9 @@ return function(B)
             R.wander = {math.cos(a), math.sin(a), tick + 18}
             B.event("stuck", {goal = key, level = 1, x = B.st.px, y = B.st.py})
         elseif stale > 240 then
-            B.blacklist(key, 900)
+            -- An unreachable pickup is unreachable for the rest of the run: forgetting it for
+            -- 15 s only makes the bot walk back to it and try again (room ping-pong).
+            B.blacklist(key, (type(key) == "string" and key:sub(1, 1) == "p") and 1e9 or 900)
             B.event("stuck", {goal = key, level = 2, x = B.st.px, y = B.st.py})
             R.goalKey = nil
             return true
@@ -1382,7 +1384,8 @@ return function(B)
             -- somewhere it should not be and needs to escape.
             local nx, ny = p.Position.X + mx * 14, p.Position.Y + my * 14
             local free = B.grid.walkableAt(nx, ny) or not B.grid.walkableAt(p.Position.X, p.Position.Y)
-            if free or st.mode == "door" or st.mode == "exit" or st.mode == "plate" then
+            if free or st.mode == "door" or st.mode == "exit" or st.mode == "plate"
+                or st.mode == "loot" then
                 B.move(mx, my)
             end
         end
