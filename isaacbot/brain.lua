@@ -1078,6 +1078,10 @@ return function(B)
         local stage, eff = B.stageInfo()
         local p = B.player()
         B.S.stats.wins = (B.S.stats.wins or 0) + 1
+        if B.st.mission then
+            B.missionDone(B.st.mission)
+            B.st.mission = nil
+        end
         B.saveConfig()
         B.event("win", {how = how, stage = stage, eff = eff, char = p and B.playerType(p) or -1,
             goal = B.S.goal, diff = game.Difficulty, cheat = B.st.cheat or false, minutes = math.floor((B.st.tick - B.st.runStartTick) / 1800 * 10) / 10})

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.19
+- 成就任务队列（mission queue）：每个任务 = 角色 + 主线结局 + 可选支线（donate_shop / guppy_hunt / angel_only），存在存档里。
+- 重开时自动取下一个未完成任务并设置角色/目标/支线；通关后自动销项（mission_start / mission_done 事件）。
+- 桥命令：`bot mission add <char> <goal> [sub...]`、`list`、`auto on|off`、`clear`、`skip`。
+- 支线：捐款机（Slot 8）投币、猫套优先、纯天使（关恶魔交易）。
+- 状态栏显示当前任务目标。
+
 ## 0.6.18
 - 够不到的拾取物在整局内拉黑（不再 15 秒后回去重试，消除房间来回跳）。
 - 拾取移动允许贴墙滑动（不再被撞墙保护取消）。

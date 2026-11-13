@@ -1254,7 +1254,12 @@ return function(B)
         local st = B.st
         local state = st.enabled and (st.paused and "Paused" or (MODE_EN[st.mode] or st.mode)) or "Off"
         -- The menu now uses the native font size; the status bar keeps its own bigger scale.
-        text(fit("PP | " .. state .. " " .. detailText(st.detail) .. "   F8 Menu", (W - 70) / 1.45),
+        local mission = ""
+        if st.mission then
+            mission = "  |  " .. tostring(st.mission.goal)
+                .. (#(st.mission.subs or {}) > 0 and (" + " .. table.concat(st.mission.subs, ",")) or "")
+        end
+        text(fit("PP | " .. state .. " " .. detailText(st.detail) .. mission .. "   F8 Menu", (W - 70) / 1.45),
             60, H - 42, {0.8, 1, 0.8}, 1, 1.45)
         if st.message ~= "" and st.renderTick < st.messageUntil then
             text(fit(st.message, (W - 70) / 1.45), 60, H - 22, {0.7, 0.85, 1}, 1, 1.45)

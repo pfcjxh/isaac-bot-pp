@@ -308,6 +308,13 @@ return function(B)
             if paid >= 12 or count(p, "GetNumCoins") < 10 then return nil end
             return 6
         end
+        local DONATION = 8
+        if variant == DONATION then
+            -- donate_shop mission: walk into the donation machine until the money is gone.
+            if not B.st.donate then return nil end
+            if count(p, "GetNumCoins") < 8 then return nil end
+            return 5
+        end
         if variant == DEVIL_BEGGAR then return nil end
         if not SAFE_SLOTS[variant] then return nil end
         if variant == KEY_MASTER then

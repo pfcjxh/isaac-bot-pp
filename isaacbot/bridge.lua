@@ -62,6 +62,27 @@ return function(B)
             local i = B.presets.find(table.concat(words, " ", 3))
             if i then B.presets.select(i) else B.log("bridge: no preset " .. arg) end
             return
+        elseif cmd == "mission" then
+            local sub = words[3]
+            if sub == "add" then
+                local subs = {}
+                for k = 6, #words do subs[#subs + 1] = words[k] end
+                B.missionAdd(tonumber(words[4]), words[5], subs)
+            elseif sub == "list" then
+                for i, t in ipairs(S.missionQueue) do
+                    B.event("mission_item", {i = i, text = B.missionText(t), done = t.done})
+                end
+                B.event("mission_list", {n = #S.missionQueue})
+            elseif sub == "auto" then
+                S.missionAuto = (words[4] ~= "off")
+            elseif sub == "clear" then
+                S.missionQueue = {}
+            elseif sub == "skip" then
+                B.missionDone(B.st.mission)
+                B.st.mission = nil
+            end
+            B.saveConfig()
+            return
         elseif cmd == "status" then
             local p = B.player()
             local stage, eff = B.stageInfo()

@@ -4,7 +4,7 @@ return function(B)
     local game = B.game
     local json = B.json
 
-    B.VERSION = "0.6.11"
+    B.VERSION = "0.6.19"
     B.CELL = 40
     B.KEY_RICH = 7   -- more than this many keys: spend them on any chest or locked door
 
@@ -19,6 +19,8 @@ return function(B)
         devil = true,           -- take devil deals that leave enough health
         useActives = true,
         useBombs = true,
+        missionQueue = {},      -- { {char=0, goal="heart", subs={...}, done=false}, ... }
+        missionAuto = true,     -- take the next queued mission when a run restarts
         pri = {},               -- collectible ids, most wanted first
         exc = {636},            -- collectible ids never taken (636 R Key rewinds the run)
         forbiddenPairs = {},    -- {a, b}: never hold both (no menu editor; old configs)
@@ -191,6 +193,7 @@ return function(B)
             preset = s.preset, startPreset = s.startPreset or "",
             forbiddenPairs = s.forbiddenPairs, stats = s.stats, cycleIndex = B.st.cycleIndex,
             bench = s.bench or false,  -- nil would drop the key and keep nothing
+            missionQueue = s.missionQueue, missionAuto = s.missionAuto,
             bridge = B.st.bridgeData,  -- keep the bridge channel (see bridge.lua) as last seen
         }
         local ok, encoded = pcall(json.encode, data)
@@ -213,7 +216,7 @@ return function(B)
         if type(data.character) == "string" or type(data.character) == "number" then
             s.character = data.character
         end
-        for _, k in ipairs({"autoRestart", "devil", "useActives", "useBombs"}) do
+        for _, k in ipairs({"autoRestart", "devil", "useActives", "useBombs", "missionAuto"}) do
             if type(data[k]) == "boolean" then s[k] = data[k] end
         end
         for _, k in ipairs({"forbiddenPairs", "stats"}) do
@@ -222,6 +225,7 @@ return function(B)
         if type(s.stats.best) ~= "table" then s.stats.best = {} end
         if type(s.stats.learn) ~= "table" then s.stats.learn = {} end
         s.bench = (type(data.bench) == "table" and type(data.bench.seeds) == "table") and data.bench or nil
+        if type(data.missionQueue) == "table" then s.missionQueue = data.missionQueue end
         if type(data.cycleIndex) == "number" then B.st.cycleIndex = data.cycleIndex end
         local function ids(t)
             local out = {}
@@ -287,6 +291,61 @@ return function(B)
         {31, "T.Lost"}, {32, "T.Lilith"}, {33, "T.Keeper"}, {34, "T.Apollyon"},
         {35, "T.Forgotten"}, {36, "T.Bethany"}, {37, "T.Jacob"},
     }
+
+    -- ------------------------------------------------------------ missions
+
+    -- A mission is one run: a character, a main ending, and optional side goals that can be
+    -- completed in the same run. The queue is persisted with the save data.
+    B.MISSION_GOALS = {
+        {id = "mom", name = "Mom"},
+        {id = "heart", name = "Mom Heart / It Lives"},
+        {id = "isaac", name = "Cathedral (Isaac)"},
+        {id = "satan", name = "Sheol (Satan)"},
+        {id = "bluebaby", name = "Chest (???)"},
+        {id = "lamb", name = "Dark Room (Lamb)"},
+    }
+    B.MISSION_SUBS = {"donate_shop", "guppy_hunt", "angel_only"}
+
+    function B.missionGoalOk(goal)
+        for _, g in ipairs(B.MISSION_GOALS) do if g.id == goal then return true end end
+        return false
+    end
+
+    function B.missionAdd(char, goal, subs)
+        if not B.missionGoalOk(goal) then return nil end
+        char = tonumber(char) or 0
+        local list = {}
+        for _, want in ipairs(subs or {}) do
+            for _, ok in ipairs(B.MISSION_SUBS) do
+                if want == ok then list[#list + 1] = want end
+            end
+        end
+        local t = {char = char, goal = goal, subs = list, done = false}
+        B.S.missionQueue[#B.S.missionQueue + 1] = t
+        B.saveConfig()
+        B.event("mission_add", {char = char, goal = goal, n = #B.S.missionQueue})
+        return t
+    end
+
+    function B.missionNext()
+        for _, t in ipairs(B.S.missionQueue) do
+            if not t.done then return t end
+        end
+        return nil
+    end
+
+    function B.missionDone(t)
+        if not t then return end
+        t.done = true
+        B.saveConfig()
+        B.event("mission_done", {char = t.char, goal = t.goal})
+    end
+
+    function B.missionText(t)
+        if not t then return "" end
+        return string.format("%s / %s%s", B.characterName(t.char), t.goal,
+            (#t.subs > 0) and (" + " .. table.concat(t.subs, ",")) or "")
+    end
 
     function B.characterName(id)
         for _, c in ipairs(B.CHARACTERS) do

@@ -108,7 +108,26 @@ local function doRestart()
         Isaac.ExecuteCommand("seed " .. seed)
         return
     end
-    local char = nextCharacter()
+    local task = B.S.missionAuto and B.missionNext() or nil
+    local char = task and task.char or nextCharacter()
+    if task then
+        B.S.goal = task.goal
+        B.st.mission = task
+        local subs = {}
+        for _, sname in ipairs(task.subs or {}) do subs[sname] = true end
+        B.st.donate = subs.donate_shop and true or false
+        if subs.angel_only then B.S.devil = false end
+        if subs.guppy_hunt then
+            for _, id in ipairs({134, 145, 187, 212, 81, 133}) do
+                local has = false
+                for _, v in ipairs(B.S.pri) do if v == id then has = true break end end
+                if not has then table.insert(B.S.pri, 1, id) end
+            end
+        end
+        B.event("mission_start", {char = task.char, goal = task.goal, n = #(task.subs or {})})
+    else
+        B.st.mission, B.st.donate = nil, false
+    end
     B.saveConfig()
     B.unseed()
     B.event("restart", {char = char, name = B.characterName(char)})
