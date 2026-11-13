@@ -833,16 +833,12 @@ return function(B)
         if not cell or cell < 0 then return nil end
         if G.dist[cell] then return routeTo(p, x, y, 0, not noSafe) end
         if G.cost[cell] then return nil end  -- open floor, but walled off from us
-        local cx, cy = G.xy(cell)
-        for _, dir in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
-            local nx, ny = cx + dir[1], cy + dir[2]
-            if nx >= 0 and nx < G.w and ny >= 0 and ny < G.h then
-                local j = nx + ny * G.w
-                local pos = room:GetGridPosition(j)
-                if G.dist[j] and B.dist(pos.X, pos.Y, x, y) < 30 then
-                    return routeTo(p, pos.X, pos.Y, 0, not noSafe)
-                end
-            end
+        -- The pickup sits on a blocked cell (a chest): walk to the nearest reachable cell
+        -- around it, then let the final approach push into it (like the door logic).
+        local near = G.reachableNear(x, y, 2)
+        if near then
+            local pos = room:GetGridPosition(near)
+            return routeTo(p, pos.X, pos.Y, 0, not noSafe)
         end
         return nil
     end
@@ -890,7 +886,9 @@ return function(B)
         B.st.detail = tostring(e.Variant) .. "." .. tostring(e.SubType)
         if track(best.key, bestRem) then return nil end
         local dx, dy = e.Position.X - p.Position.X, e.Position.Y - p.Position.Y
-        if dx * dx + dy * dy < 900 and G.segmentClear(p.Position.X, p.Position.Y,
+        -- 50 units (not 30): a chest on a blocked cell is 40 away from the neighbouring cell
+        -- centre, so the old radius made the bot stand next to it and never touch it.
+        if dx * dx + dy * dy < 2500 and G.segmentClear(p.Position.X, p.Position.Y,
             e.Position.X, e.Position.Y, 8) then
             return dx, dy
         end
