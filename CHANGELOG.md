@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.20
+- 防回头：刚穿过的门在下一个房间被临时拉黑 2.5 秒，修掉"门口一进一出"的循环（事件 `no_backtrack`）。
+
 ## 0.6.19
 - 成就任务队列（mission queue）：每个任务 = 角色 + 主线结局 + 可选支线（donate_shop / guppy_hunt / angel_only），存在存档里。
 - 重开时自动取下一个未完成任务并设置角色/目标/支线；通关后自动销项（mission_start / mission_done 事件）。

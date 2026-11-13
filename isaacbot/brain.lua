@@ -56,6 +56,14 @@ return function(B)
     -- ------------------------------------------------------------ room / floor events
 
     function R.onNewRoom()
+        -- Do not turn around and walk straight back through the door we just used: that is the
+        -- in-out-in-out loop. Forget the way back for ~2.5 s unless something really needs it.
+        local back = R.lastDoor
+        if back and B.st.tick - back.tick < 30 then
+            local slot = (back.slot + 2) % 4
+            B.blacklist("door" .. slot .. ":" .. B.st.room, 150)
+            B.event("no_backtrack", {slot = slot, room = B.st.room})
+        end
         R.goalKey, R.wander, R.bombPlan = nil, nil, nil
         R.idleClear, R.idleTicks = 0, 0
         G.builtAt = -1
@@ -1022,6 +1030,8 @@ return function(B)
             -- Line up with the door, then walk into it.
             local lx, ly = (pos.X - p.Position.X), (pos.Y - p.Position.Y)
             if ox ~= 0 then ly = ly * 2 else lx = lx * 2 end
+            -- Remember which door was used; the next room blacklists the way back for a moment.
+            R.lastDoor = {room = B.st.room, slot = d.slot, tick = B.st.tick}
             return lx + ox * 60, ly + oy * 60
         end
         local tx, ty, remaining = routeTo(p, inX, inY, 1)
