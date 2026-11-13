@@ -797,12 +797,12 @@ return function(B)
     -- a diagonal neighbour, and a chest wedged between two rocks corner to corner had the bot
     -- pushing into the gap for good. A pickup lying on the edge of a blocked cell still counts
     -- from a side neighbour close enough to touch it.
-    local function lootRoute(p, e)
+    local function lootRoute(p, e, noSafe)
         local room = game:GetRoom()
         local x, y = e.Position.X, e.Position.Y
         local cell = room:GetGridIndex(e.Position)
         if not cell or cell < 0 then return nil end
-        if G.dist[cell] then return routeTo(p, x, y, 0, true) end
+        if G.dist[cell] then return routeTo(p, x, y, 0, not noSafe) end
         if G.cost[cell] then return nil end  -- open floor, but walled off from us
         local cx, cy = G.xy(cell)
         for _, dir in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
@@ -811,7 +811,7 @@ return function(B)
                 local j = nx + ny * G.w
                 local pos = room:GetGridPosition(j)
                 if G.dist[j] and B.dist(pos.X, pos.Y, x, y) < 30 then
-                    return routeTo(p, pos.X, pos.Y, 0, true)
+                    return routeTo(p, pos.X, pos.Y, 0, not noSafe)
                 end
             end
         end
@@ -824,7 +824,7 @@ return function(B)
         local best, bestS, bestTx, bestTy, bestRem
         for _, entry in ipairs(list) do
             local e = entry.e
-            local tx, ty, remaining = lootRoute(p, e)
+            local tx, ty, remaining = lootRoute(p, e, entry.beggar)
             if tx then
                 local s = entry.value * 30 / (10 + remaining)
                 -- Stick with the pickup already being walked to: otherwise two equal cards
@@ -847,6 +847,16 @@ return function(B)
         if not best then return nil end
         R.lootKey, R.lootUntil = best.key, B.st.tick + 60
         local e = best.e
+        -- Count coins fed to a beggar so it is not fed forever if the game keeps it around.
+        if best.beggar then
+            local d = B.dist(p.Position.X, p.Position.Y, e.Position.X, e.Position.Y)
+            if d < 26 and B.st.tick - (B.st.beggarTick or 0) > 20 then
+                B.st.beggar = B.st.beggar or {}
+                B.st.beggar[best.key] = (B.st.beggar[best.key] or 0) + 1
+                B.st.beggarTick = B.st.tick
+                B.event("beggar_pay", {paid = B.st.beggar[best.key]})
+            end
+        end
         B.st.mode = "loot"
         B.st.detail = tostring(e.Variant) .. "." .. tostring(e.SubType)
         if track(best.key, bestRem) then return nil end

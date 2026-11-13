@@ -331,6 +331,22 @@ return function(B)
         end
         for _, entry in pairs(groups) do out[#out + 1] = entry end
 
+        -- Beggars: pay coins until they hand over the item. Worth it when rich, and the small
+        -- spike strip in front is accepted (the route may hurt).
+        local beg = B.try(function() return EntityType.ENTITY_BEGGAR end)
+        if beg then
+            local begs = B.try(function()
+                return Isaac.FindByType(beg, -1, -1, false, false) end) or {}
+            for _, e in ipairs(begs) do
+                local key = "g" .. B.hash(e)
+                local paid = (B.st.beggar and B.st.beggar[key]) or 0
+                if e.Variant == 0 and paid < 12 and not B.isBlacklisted(key)
+                    and count(p, "GetNumCoins") >= 10 then
+                    out[#out + 1] = {e = e, value = 6, key = key, beggar = true}
+                end
+            end
+        end
+
         -- slot machines are not pickups: scan them separately
         local slots = B.try(function()
             return Isaac.FindByType(EntityType.ENTITY_SLOT, -1, -1, false, false) end) or {}
