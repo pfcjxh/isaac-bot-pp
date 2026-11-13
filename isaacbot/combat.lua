@@ -163,6 +163,28 @@ return function(B)
     -- adds die first; close-range punishers get a wider preferred distance.
     C.BOSS_ADDS = {}
     C.BOSS_FAR = {}
+    -- Per-boss playbook. add = clear adds first; far = keep extra distance; burst = spend
+    -- bombs/actives earlier. Names that do not exist in this build are skipped safely.
+    C.BOSS_PLAN = {}
+    do
+        local function boss(names, plan)
+            for _, n in ipairs(names) do
+                local t = B.try(function() return EntityType[n] end)
+                if t then C.BOSS_PLAN[t] = plan end
+            end
+        end
+        boss({"ENTITY_MOM", "ENTITY_MOMS_HEART", "ENTITY_IT_LIVES"}, {adds = true})
+        boss({"ENTITY_MEGA_SATAN", "ENTITY_MOTHER", "ENTITY_BEAST", "ENTITY_DOGMA"},
+            {adds = true, far = true, burst = true})
+        boss({"ENTITY_SATAN", "ENTITY_MONSTRO2", "ENTITY_BLOAT", "ENTITY_KRAMPUS"},
+            {far = true, burst = true})
+        boss({"ENTITY_HUSH", "ENTITY_DELIRIUM", "ENTITY_THE_LAMB", "ENTITY_LAMB"},
+            {far = true, burst = true})
+        boss({"ENTITY_ISAAC", "ENTITY_BLUEBABY", "ENTITY_GURDY", "ENTITY_GURDY_JR"}, {far = true})
+        boss({"ENTITY_CHUB", "ENTITY_LARRYJR", "ENTITY_MONSTRO", "ENTITY_FISTULA",
+            "ENTITY_GEMINI"}, {far = false})
+        boss({"ENTITY_ULTRA_GREED", "ENTITY_GREED"}, {adds = true, far = true})
+    end
     do
         local function fill(set, names)
             for _, n in ipairs(names) do
@@ -174,6 +196,10 @@ return function(B)
             "ENTITY_MOM_HEAD", "ENTITY_MOMS_DEAD_HAND"})
         fill(C.BOSS_FAR, {"ENTITY_HUSH", "ENTITY_BLOAT", "ENTITY_SATAN", "ENTITY_MONSTRO2",
             "ENTITY_DELIRIUM", "ENTITY_THE_LAMB", "ENTITY_LAMB"})
+        for t, pl in pairs(C.BOSS_PLAN) do
+            if pl.adds then C.BOSS_ADDS[t] = true end
+            if pl.far then C.BOSS_FAR[t] = true end
+        end
     end
 
     -- Reviving leftovers still in the room, for the caller to finish off.
@@ -654,7 +680,8 @@ return function(B)
         local stuck = C.ARMORED[target.Type] and rec ~= nil and (B.st.tick - rec.drop) > 240
         if not bossFight and not stuck then return end
         local bombs = B.try(function() return p:GetNumBombs() end) or 0
-        if bombs < 3 then return end
+        local plan = C.BOSS_PLAN[target.Type]
+        if bombs < ((plan and plan.burst) and 2 or 3) then return end
         if (C.lastBomb or -1000) + 120 > B.st.tick then return end
         local d = B.dist(p.Position.X, p.Position.Y, target.Position.X, target.Position.Y)
         if d < 70 + (target.Size or 10) then
