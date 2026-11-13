@@ -826,7 +826,9 @@ return function(B)
             local ge = room:GetGridEntity(i)
             if ge and B.try(function() return ge:GetType() end) == GridEntityType.GRID_PRESSURE_PLATE then
                 local state = B.try(function() return ge.State end) or 0
-                local key = "plate" .. i
+                -- Key includes the room: a plate given up in another room must not hide the
+                -- plate at the same grid index here (the blacklist outlives the room).
+                local key = "plate" .. B.st.room .. ":" .. i
                 if state == 0 and not B.isBlacklisted(key) then
                     local pos = room:GetGridPosition(i)
                     local tx, ty, remaining = routeTo(p, pos.X, pos.Y, 0, true)
