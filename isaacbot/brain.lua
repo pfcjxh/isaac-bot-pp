@@ -800,6 +800,9 @@ return function(B)
                         B.st.mode, B.st.detail = "plate", tostring(i)
                         if track(key, remaining) then return nil end
                         local dx, dy = pos.X - p.Position.X, pos.Y - p.Position.Y
+                        -- Close to the plate the dodge layer treats the neighbouring fires as a
+                        -- reason to back off; the plate itself is walkable, so ignore it here.
+                        B.st.plateNear = (dx * dx + dy * dy) < 3600
                         if dx * dx + dy * dy < 400 then return dx, dy end
                         return goToward(p, tx, ty)
                     end
@@ -1362,9 +1365,15 @@ return function(B)
             C.keepCharge(p, R.prof or C.profile(p))
         end
 
-        -- Final move through the dodge layer.
+        -- Final move through the dodge layer, except for the last step onto a pressure
+        -- plate: the fire statics around it would otherwise veto that step forever.
         local weight = dodgeWeight(p, ctx)
-        local mx, my, risk = D.choose(p, dx, dy, weight)
+        local mx, my, risk
+        if st.mode == "plate" and st.plateNear then
+            mx, my, risk = dx, dy, 0
+        else
+            mx, my, risk = D.choose(p, dx, dy, weight)
+        end
         if mx and (mx ~= 0 or my ~= 0) then
             -- Do not grind against a wall: a step into a solid cell is dropped unless this is a
             -- door/exit walk (those push through the opening on purpose) or the bot is standing
