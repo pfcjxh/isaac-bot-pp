@@ -872,6 +872,24 @@ return function(B)
         if not best then return nil end
         R.lootKey, R.lootUntil = best.key, B.st.tick + 60
         local e = best.e
+        -- A chest behind rocks: blow the rocks (or the chest itself) instead of standing at the
+        -- wall. Bombs are meant for this.
+        local chest = e.Variant == PickupVariant.PICKUP_LOCKEDCHEST
+            or e.Variant == PickupVariant.PICKUP_CHEST
+            or e.Variant == PickupVariant.PICKUP_WOODENCHEST
+        if chest and bombs >= 1 and not R.bombPlan
+            and not G.segmentClear(p.Position.X, p.Position.Y, e.Position.X, e.Position.Y, 8) then
+            local plan = planBomb(p, e.Position.X, e.Position.Y)
+            if plan then
+                plan.expire = B.st.tick + 300
+                R.bombPlan = plan
+                B.st.mode, B.st.detail = "loot bomb", tostring(e.Variant)
+                B.event("bomb_chest", {variant = e.Variant, bombs = bombs})
+                local bx, by = runBomb(p)
+                if bx then return bx, by end
+                return nil
+            end
+        end
         -- Count coins fed to a beggar so it is not fed forever if the game keeps it around.
         if best.beggar then
             local d = B.dist(p.Position.X, p.Position.Y, e.Position.X, e.Position.Y)
