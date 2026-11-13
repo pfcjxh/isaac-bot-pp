@@ -1382,7 +1382,9 @@ return function(B)
             -- somewhere it should not be and needs to escape.
             local nx, ny = p.Position.X + mx * 14, p.Position.Y + my * 14
             local free = B.grid.walkableAt(nx, ny) or not B.grid.walkableAt(p.Position.X, p.Position.Y)
-            if free or st.mode == "door" or st.mode == "exit" then B.move(mx, my) end
+            if free or st.mode == "door" or st.mode == "exit" or st.mode == "plate" then
+                B.move(mx, my)
+            end
         end
         if B.replay then B.replay.record(p, ents, dx, dy, mx, my, risk, weight) end
     end
