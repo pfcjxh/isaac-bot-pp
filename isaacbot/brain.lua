@@ -884,8 +884,12 @@ return function(B)
         end
         B.st.mode = "loot"
         B.st.detail = tostring(e.Variant) .. "." .. tostring(e.SubType)
-        if track(best.key, bestRem) then return nil end
         local dx, dy = e.Position.X - p.Position.X, e.Position.Y - p.Position.Y
+        local d2 = dx * dx + dy * dy
+        -- Near a pickup the goal cannot get any "closer" once the cell itself is blocked
+        -- (chests): the stuck tracker would start wandering back and forth. Skip it there.
+        B.st.lootNear = d2 < 4900
+        if not B.st.lootNear and track(best.key, bestRem) then return nil end
         -- 50 units (not 30): a chest on a blocked cell is 40 away from the neighbouring cell
         -- centre, so the old radius made the bot stand next to it and never touch it.
         if dx * dx + dy * dy < 2500 and G.segmentClear(p.Position.X, p.Position.Y,
@@ -1391,9 +1395,9 @@ return function(B)
         -- plate: the fire statics around it would otherwise veto that step forever.
         local weight = dodgeWeight(p, ctx)
         local mx, my, risk
-        if st.mode == "plate" then
-            -- Plate rooms: walk the path straight. The path already avoids fire cells; the
-            -- dodge layer's static-fire radius was what kept vetoing the approach.
+        if st.mode == "plate" or (st.mode == "loot" and st.lootNear) then
+            -- Plate rooms and the last step onto a pickup: walk straight. The path already
+            -- avoids hazards; the dodge layer was vetoing the final approach.
             mx, my, risk = dx, dy, 0
         else
             mx, my, risk = D.choose(p, dx, dy, weight)
