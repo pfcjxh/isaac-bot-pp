@@ -45,7 +45,6 @@ return function(B)
     -- the build away, or lead off the main path).
     local SKIP = {
         [RT.ROOM_SECRET] = true, [RT.ROOM_SUPERSECRET] = true, [RT.ROOM_ULTRASECRET] = true,
-        [RT.ROOM_SACRIFICE] = true,
         [RT.ROOM_DICE] = true, [RT.ROOM_BLACK_MARKET] = true,
         [RT.ROOM_ERROR] = true, [RT.ROOM_BOSSRUSH] = true, [RT.ROOM_SECRET_EXIT] = true,
         [RT.ROOM_BLUE] = true, [RT.ROOM_GREED_EXIT] = true, [RT.ROOM_DUNGEON] = true,
@@ -58,6 +57,7 @@ return function(B)
         [RT.ROOM_DEVIL] = 50, [RT.ROOM_ANGEL] = 45,
         [RT.ROOM_LIBRARY] = 25, [RT.ROOM_ISAACS] = 15, [RT.ROOM_BARREN] = 12, [RT.ROOM_CHEST] = 15,
         [RT.ROOM_CURSE] = 26, [RT.ROOM_CHALLENGE] = 30, [RT.ROOM_ARCADE] = 16,
+        [RT.ROOM_SACRIFICE] = 12,
         [RT.ROOM_MINIBOSS] = 18, [RT.ROOM_DEFAULT] = 8,
     }
 
@@ -180,6 +180,18 @@ return function(B)
             or t == RT.ROOM_PLANETARIUM or t == RT.ROOM_CHEST or t == RT.ROOM_BOSS
     end
 
+    -- Sacrifice rooms cost a heart per spike step: only worth it at full health with a real
+    -- buffer of hearts.
+    function F.sacrificeOk(p)
+        p = p or B.player()
+        if not p then return false end
+        local hp = (B.try(function() return p:GetHearts() end) or 0)
+            + (B.try(function() return p:GetSoulHearts() end) or 0)
+            + (B.try(function() return p:GetBoneHearts() end) or 0) * 2
+        local max = B.try(function() return p:GetMaxHearts() end) or 0
+        return hp >= 6 and hp >= max
+    end
+
     -- Curse rooms cost half a heart at the door but hold red chests and devil items. Enter with
     -- three hearts or more; below that health is worth more than the gamble.
     function F.curseOk(p)
@@ -245,6 +257,7 @@ return function(B)
                 if r.type == RT.ROOM_CHALLENGE and not F.curseOk(p) then interest = 0 end
                 if r.type == RT.ROOM_ARCADE
                     and (B.try(function() return p:GetNumCoins() end) or 0) < 10 then interest = 0 end
+                if r.type == RT.ROOM_SACRIFICE and not F.sacrificeOk(p) then interest = 0 end
                 if r.type == RT.ROOM_SHOP and coins < 10 then interest = 4 end
                 -- From floor 2 on these rooms sit behind a locked door.
                 local lockedType = stage > 1 and (r.type == RT.ROOM_TREASURE or r.type == RT.ROOM_SHOP

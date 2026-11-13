@@ -511,6 +511,51 @@ return function(B)
         return 0, 0
     end
 
+    -- ------------------------------------------------------------ sacrifice room
+
+    local function sacHp(p)
+        return (B.try(function() return p:GetHearts() end) or 0)
+            + (B.try(function() return p:GetSoulHearts() end) or 0)
+            + (B.try(function() return p:GetBoneHearts() end) or 0) * 2
+    end
+
+    -- Full health in a sacrifice room: step on the spikes on purpose (up to two times), take
+    -- the reward, step off and move on.
+    local function sacrificeGoal(p)
+        local desc = game:GetLevel():GetCurrentRoomDesc()
+        if not desc or not desc.Data or desc.Data.Type ~= RoomType.ROOM_SACRIFICE then return nil end
+        if not F.sacrificeOk(p) then return nil end
+        local key = "sac" .. B.st.room
+        R.sacHits = R.sacHits or {}
+        local n = R.sacHits[key] or 0
+        if n >= 2 then return nil end
+        if (R.sacUntil or 0) > B.st.tick then return 0, 0 end
+        local cell, bestD
+        for c2 in pairs(G.spike) do
+            if G.dist[c2] and (not bestD or G.dist[c2] < bestD) then cell, bestD = c2, G.dist[c2] end
+        end
+        if not cell then return nil end
+        local pos = game:GetRoom():GetGridPosition(cell)
+        local hp = sacHp(p)
+        if R.sacHpRoom ~= B.st.room then R.sacHpRoom, R.sacHp = B.st.room, hp end
+        B.st.mode, B.st.detail = "sacrifice", tostring(n)
+        local d = B.dist(p.Position.X, p.Position.Y, pos.X, pos.Y)
+        if d < 20 then
+            if hp < R.sacHp then
+                R.sacHits[key] = n + 1
+                R.sacHp = hp
+                R.sacUntil = B.st.tick + 45
+                B.event("sacrifice", {n = n + 1, hp = hp})
+                local tx, ty = stepAway(p, pos.X, pos.Y)
+                if tx then return goToward(p, tx, ty) end
+            end
+            return 0, 0
+        end
+        local tx, ty = routeTo(p, pos.X, pos.Y, 0, false)
+        if tx then return goToward(p, tx, ty) end
+        return nil
+    end
+
     -- ------------------------------------------------------------ cards
 
     -- Cards have known effects, so the bot can use the good ones itself. Pills are left alone:
@@ -1349,6 +1394,7 @@ return function(B)
             if not dx then dx, dy = cardSwapGoal(p) end
             if not dx then dx, dy = lootGoal(p, ctx) end
             if not dx and clear then dx, dy = sweepGoal(p) end
+            if not dx and clear then dx, dy = sacrificeGoal(p) end
             if not dx and clear then dx, dy = secretGoal(p) end
             if not dx and not clear then
                 -- Enemies hidden or invulnerable (jumping, burrowed, spawning). If any are on
@@ -1439,7 +1485,7 @@ return function(B)
         -- plate: the fire statics around it would otherwise veto that step forever.
         local weight = dodgeWeight(p, ctx)
         local mx, my, risk
-        if st.mode == "plate" or (st.mode == "loot" and st.lootNear) then
+        if st.mode == "plate" or st.mode == "sacrifice" or (st.mode == "loot" and st.lootNear) then
             -- Plate rooms and the last step onto a pickup: walk straight. The path already
             -- avoids hazards; the dodge layer was vetoing the final approach.
             mx, my, risk = dx, dy, 0
@@ -1453,7 +1499,7 @@ return function(B)
             local nx, ny = p.Position.X + mx * 14, p.Position.Y + my * 14
             local free = B.grid.walkableAt(nx, ny) or not B.grid.walkableAt(p.Position.X, p.Position.Y)
             if free or st.mode == "door" or st.mode == "exit" or st.mode == "plate"
-                or st.mode == "loot" then
+                or st.mode == "loot" or st.mode == "sacrifice" then
                 B.move(mx, my)
             end
         end
