@@ -4,8 +4,9 @@ return function(B)
     local game = B.game
     local json = B.json
 
-    B.VERSION = "0.6.10"
+    B.VERSION = "0.6.11"
     B.CELL = 40
+    B.KEY_RICH = 7   -- more than this many keys: spend them on any chest or locked door
 
     -- Settings persisted with mod:SaveData. The F8 menu (panel.lua) edits them; presets.lua
     -- stores named copies of everything except stats.

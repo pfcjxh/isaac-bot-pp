@@ -171,6 +171,15 @@ return function(B)
         return r ~= nil and (r.type == RT.ROOM_ISAACS or r.type == RT.ROOM_BARREN)
     end
 
+    -- Rooms worth spending a key on when keys are short (otherwise only a real surplus opens
+    -- locked doors).
+    function F.importantRoom(r)
+        if not r then return false end
+        local t = r.type
+        return t == RT.ROOM_TREASURE or t == RT.ROOM_SHOP or t == RT.ROOM_LIBRARY
+            or t == RT.ROOM_PLANETARIUM or t == RT.ROOM_CHEST or t == RT.ROOM_BOSS
+    end
+
     -- Curse rooms cost half a heart at the door but hold red chests and devil items. Enter with
     -- three hearts or more; below that health is worth more than the gamble.
     function F.curseOk(p)
@@ -242,6 +251,9 @@ return function(B)
                     or r.type == RT.ROOM_LIBRARY or r.type == RT.ROOM_PLANETARIUM)
                     or r.type == RT.ROOM_CHEST
                 if lockedType and keys == 0 then interest = interest * 0.3 end
+                -- Keys are scarce: do not route to a locked room that is not worth one.
+                if lockedType and keys >= 1 and keys <= B.KEY_RICH
+                    and not F.importantRoom(r) then interest = 0 end
                 if F.isBedroom(r) and not F.canOpenBedroom(p, r) then interest = 0 end
                 if fast and interest < 25 then interest = 0 end
                 if interest > 0 then
@@ -319,7 +331,10 @@ return function(B)
                 if usable and d.locked then
                     if F.isBedroom(d.room) then
                         usable = F.canOpenBedroom(p, d.room)
-                    elseif keys == 0 and not golden then
+                    elseif keys < 1 and not golden then
+                        usable = false
+                    elseif keys <= B.KEY_RICH and not golden
+                        and not F.importantRoom(d.room) then
                         usable = false
                     end
                 end

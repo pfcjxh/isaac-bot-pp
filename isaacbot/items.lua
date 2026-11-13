@@ -267,8 +267,9 @@ return function(B)
             if sub == 0 then return nil end
             local keys = count(p, "GetNumKeys")
             local golden = B.try(function() return p:HasGoldenKey() end)
-            -- Keep keys for doors and golden chests: only open key chests with a surplus.
-            if keys < 3 and not golden then return nil end
+            -- Only with a real surplus (> B.KEY_RICH) are key chests opened; golden chests and
+            -- important doors come first otherwise.
+            if keys <= B.KEY_RICH and not golden then return nil end
             value = 4
         elseif v == PV.PICKUP_BIGCHEST or v == PV.PICKUP_TROPHY then
             return nil -- run endings are chosen by the floor logic, never as loot
@@ -310,7 +311,8 @@ return function(B)
         if variant == DEVIL_BEGGAR then return nil end
         if not SAFE_SLOTS[variant] then return nil end
         if variant == KEY_MASTER then
-            if count(p, "GetNumKeys") < 1 then return nil end
+            -- Same rule as locked chests: only a real key surplus pays for one.
+            if count(p, "GetNumKeys") <= B.KEY_RICH then return nil end
             return 2
         end
         -- Coins are worth more in the shop: only gamble what is clearly spare.
