@@ -780,6 +780,22 @@ return function(B)
                         -- at a live spike, so the bot walks up and steps on when it retracts.
                         tx, ty, remaining = routeTo(p, pos.X, pos.Y, 0, false)
                     end
+                    if not tx then
+                        -- Walled off by a fireplace, poop or rock: clear it. If nothing
+                        -- breakable is in the way the plate is unreachable this room, so give
+                        -- up on it instead of retrying every few seconds.
+                        local plan = planBomb(p, pos.X, pos.Y)
+                        if plan then
+                            plan.expire = B.st.tick + 300
+                            R.bombPlan = plan
+                            B.st.mode, B.st.detail = "plate", tostring(i)
+                            local dx, dy = runBomb(p)
+                            if dx then return dx, dy end
+                            return nil
+                        end
+                        B.blacklist(key, 1e9)
+                        B.event("plate_blocked", {cell = i})
+                    end
                     if tx then
                         B.st.mode, B.st.detail = "plate", tostring(i)
                         if track(key, remaining) then return nil end
