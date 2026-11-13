@@ -877,6 +877,32 @@ return function(B)
         local chest = e.Variant == PickupVariant.PICKUP_LOCKEDCHEST
             or e.Variant == PickupVariant.PICKUP_CHEST
             or e.Variant == PickupVariant.PICKUP_WOODENCHEST
+        if chest and bombs >= 1 and not R.bombPlan then
+            -- Blow a rock that sits directly next to the chest first: that is the usual reason
+            -- the chest cannot be reached (a vault with one rock in the opening).
+            local room = game:GetRoom()
+            local cell = room:GetGridIndex(e.Position)
+            if cell and cell >= 0 then
+                local cx, cy = G.xy(cell)
+                for _, dir in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+                    local nx, ny = cx + dir[1], cy + dir[2]
+                    if nx >= 0 and nx < G.w and ny >= 0 and ny < G.h then
+                        local j = nx + ny * G.w
+                        if G.rock[j] then
+                            local stand = standNear(j)
+                            if stand then
+                                R.bombPlan = {rock = j, stand = stand, expire = B.st.tick + 300}
+                                B.st.mode, B.st.detail = "loot bomb", tostring(e.Variant)
+                                B.event("bomb_chest", {variant = e.Variant, tile = j})
+                                local bx, by = runBomb(p)
+                                if bx then return bx, by end
+                                return nil
+                            end
+                        end
+                    end
+                end
+            end
+        end
         if chest and bombs >= 1 and not R.bombPlan
             and not G.segmentClear(p.Position.X, p.Position.Y, e.Position.X, e.Position.Y, 8) then
             local plan = planBomb(p, e.Position.X, e.Position.Y)
