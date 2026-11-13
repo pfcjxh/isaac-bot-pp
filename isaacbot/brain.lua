@@ -1263,6 +1263,14 @@ return function(B)
             dx, dy = fight(p, foes, ctx)
         else
             local clear = room:IsClear()
+            -- The game sometimes keeps a room "uncleared" with nothing targetable left (a
+            -- stuck spawner, a fire that cannot be put out, a bugged room flag). After a few
+            -- seconds of sweeping, behave as if it were clear so the bot moves on instead of
+            -- standing in the middle firing in four directions forever.
+            if not clear and #foes == 0 and R.idleClear > 90 and #hiddenThreats(ents) == 0 then
+                clear = true
+                st.mode, st.detail = "idle", ""
+            end
             if R.bombPlan then dx, dy = runBomb(p) end
             if not dx then dx, dy = plateGoal(p) end
             if not dx then dx, dy = cardSwapGoal(p) end
