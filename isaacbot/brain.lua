@@ -850,7 +850,7 @@ return function(B)
                             if dx then return dx, dy end
                             return nil
                         end
-                        B.blacklist(key, 1e9)
+                        B.blacklist(key, 900)
                         B.event("plate_blocked", {cell = i})
                     end
                     if tx then
@@ -1103,8 +1103,10 @@ return function(B)
             if R.doorKey ~= key then R.doorKey, R.doorTick = key, B.st.tick end
             if B.st.tick - (R.doorTick or B.st.tick) > 60 then
                 -- Not enterable: never come back to this door or this room this floor.
-                B.blacklist(key, 1e9)
-                if d.room then B.st.badRooms[d.room.li] = B.st.tick + 1e9 end
+                -- Not permanent: a plate, a spawner or a switch in this room may open the
+                -- door later. Retry after a while instead of dead-locking the floor.
+                B.blacklist(key, 600)
+                if d.room then B.st.badRooms[d.room.li] = B.st.tick + 600 end
                 B.event("door_closed", {slot = d.slot, room = B.st.room,
                     target = d.room and d.room.gi or -1, locked = d.locked or false})
                 R.doorKey = nil
