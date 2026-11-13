@@ -251,24 +251,22 @@ return function(B)
                 + (B.try(function() return p:GetSoulHearts() end) or 0) < 4 then return nil end
             value = 4
         elseif v == PV.PICKUP_CHEST or v == PV.PICKUP_WOODENCHEST then
-            if sub == 0 then return nil end -- opened
-            -- A golden chest is PICKUP_CHEST with the golden subtype: always worth a key.
-            local gsub = B.try(function() return ChestSubType.CHEST_GOLDEN end)
-            if gsub and sub == gsub then
-                local keys = count(p, "GetNumKeys")
-                local gk = B.try(function() return p:HasGoldenKey() end)
-                if keys < 1 and not gk then return nil end
-                value = 10
-            else
-                value = 3
-            end
-        elseif v == PV.PICKUP_LOCKEDCHEST or v == PV.PICKUP_ETERNALCHEST or v == PV.PICKUP_OLDCHEST
+            -- ChestSubType is only 0 = opened, 1 = closed (there is no golden subtype).
+            if sub == 0 then return nil end
+            value = 3
+        elseif v == PV.PICKUP_LOCKEDCHEST then
+            -- The golden / locked chest: open it with any key in hand, it is always worth one.
+            if sub == 0 then return nil end
+            local keys = count(p, "GetNumKeys")
+            local gk = B.try(function() return p:HasGoldenKey() end)
+            if keys < 1 and not gk then return nil end
+            value = 9
+        elseif v == PV.PICKUP_ETERNALCHEST or v == PV.PICKUP_OLDCHEST
             or v == PV.PICKUP_MEGACHEST then
             if sub == 0 then return nil end
             local keys = count(p, "GetNumKeys")
             local golden = B.try(function() return p:HasGoldenKey() end)
-            -- Only with a real surplus (> B.KEY_RICH) are key chests opened; golden chests and
-            -- important doors come first otherwise.
+            -- These stay behind the surplus rule: only with more than B.KEY_RICH keys.
             if keys <= B.KEY_RICH and not golden then return nil end
             value = 4
         elseif v == PV.PICKUP_BIGCHEST or v == PV.PICKUP_TROPHY then
