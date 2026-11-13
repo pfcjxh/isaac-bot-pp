@@ -279,6 +279,23 @@ return function(B)
         return any
     end
 
+    -- Doorless rooms (secret rooms, crawl spaces): the way out is the bombed hole in the
+    -- wall, which is a walkable border cell. Returns its world position or nil.
+    function F.hole()
+        local room = game:GetRoom()
+        local w = room:GetGridWidth()
+        local size = room:GetGridSize()
+        local h = size // w
+        for i = 0, size - 1 do
+            local x, y = i % w, i // w
+            if x == 0 or x == w - 1 or y == 0 or y == h - 1 then
+                local pos = room:GetGridPosition(i)
+                if B.try(function() return B.grid.walkableAt(pos.X, pos.Y) end) then return pos end
+            end
+        end
+        return nil
+    end
+
     -- Doors of the current room with their target rooms.
     function F.doors()
         local room = game:GetRoom()

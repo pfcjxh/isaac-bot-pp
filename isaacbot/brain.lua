@@ -1108,6 +1108,14 @@ return function(B)
         local roomIdx = level:GetCurrentRoomIndex()
         local here = F.roomOfIndex(roomIdx)
 
+        -- Secret rooms and crawl spaces have no doors: leave through the bombed hole in the
+        -- wall, or step onto the ladder at the centre.
+        if #F.doors() == 0 then
+            local hole = F.hole()
+            if hole then return exitGoal(p, {kind = "hole", pos = hole}) end
+            return exitGoal(p, {kind = "hole", pos = game:GetRoom():GetCenterPos()})
+        end
+
         -- Off-map rooms (devil/angel, I AM ERROR, ...): leave through the first door.
         if roomIdx < 0 then
             R.devilDone = true
