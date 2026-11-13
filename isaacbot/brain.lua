@@ -1369,7 +1369,9 @@ return function(B)
         -- plate: the fire statics around it would otherwise veto that step forever.
         local weight = dodgeWeight(p, ctx)
         local mx, my, risk
-        if st.mode == "plate" and st.plateNear then
+        if st.mode == "plate" then
+            -- Plate rooms: walk the path straight. The path already avoids fire cells; the
+            -- dodge layer's static-fire radius was what kept vetoing the approach.
             mx, my, risk = dx, dy, 0
         else
             mx, my, risk = D.choose(p, dx, dy, weight)
