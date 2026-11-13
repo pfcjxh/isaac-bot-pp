@@ -1300,10 +1300,18 @@ return function(B)
                     end
                 else
                     st.detail = ""
-                    local c = room:GetCenterPos()
-                    local tx, ty = routeTo(p, c.X, c.Y, 2)
-                    dx, dy = goToward(p, tx, ty)
-                    C.sweep(p, prof)
+                    -- Nothing visible and the room still claims to be uncleared: after 20 s of
+                    -- standing around, try the floor routing anyway instead of waiting forever.
+                    if R.idleClear > 600 then
+                        dx, dy = routeFloor(p, roomType, effStage)
+                        if dx then st.mode = "roam" end
+                    end
+                    if not dx then
+                        local c = room:GetCenterPos()
+                        local tx, ty = routeTo(p, c.X, c.Y, 2)
+                        dx, dy = goToward(p, tx, ty)
+                        C.sweep(p, prof)
+                    end
                 end
                 st.mode = "hold"
             elseif not dx then

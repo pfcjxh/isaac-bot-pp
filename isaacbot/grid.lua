@@ -41,14 +41,16 @@ return function(B)
     G.rockKind = {}   -- [cell] = GridEntityType, so loot rocks can be told from plain ones
 
     -- A fireplace blocks and burns on contact only while lit; once put out it is a harmless
-    -- pile you can walk over. White (4) and blue (2) fires never go out.
+    -- pile you can walk over. White (4), blue (2) and purple (3) fires cannot be put out here,
+    -- so they are never targeted by the sweep.
     local WHITE_FIRE = 4
     local BLUE_FIRE = 2
+    local PURPLE_FIRE = 3
     function G.fireLit(e)
         return (B.try(function() return e.HitPoints end) or 0) > 1
     end
     function G.fireBreakable(e)
-        return e.Variant ~= WHITE_FIRE and e.Variant ~= BLUE_FIRE
+        return e.Variant ~= WHITE_FIRE and e.Variant ~= BLUE_FIRE and e.Variant ~= PURPLE_FIRE
     end
     G.builtAt = -1
     G.roomKey = nil
