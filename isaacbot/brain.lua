@@ -73,6 +73,7 @@ return function(B)
         R.lootKey, R.lootUntil = nil, 0
         G.forceSpikes = false
         R.lastPosTick = nil
+        R.doorKey = nil
         R.secretPlan = nil
     end
 
@@ -964,6 +965,19 @@ return function(B)
             return nil
         end
         local dist = B.dist(p.Position.X, p.Position.Y, inX, inY)
+        if dist < 34 then
+            -- A door that does not open after two seconds cannot be entered (locked without a
+            -- key, boarded, or not a real door): stop pushing and forget it for a while.
+            if R.doorKey ~= key then R.doorKey, R.doorTick = key, B.st.tick end
+            if B.st.tick - (R.doorTick or B.st.tick) > 60 then
+                B.blacklist(key, 1800)
+                B.event("door_closed", {slot = d.slot, room = B.st.room, locked = d.locked or false})
+                R.doorKey = nil
+                return nil
+            end
+        else
+            R.doorKey = nil
+        end
         if dist < 34 then
             if track(key, 0) then
                 -- A locked door that stayed shut (bedroom, key-proof doors): forget the
