@@ -174,6 +174,7 @@ return function(B)
             end
         end
         boss({"ENTITY_MOM", "ENTITY_MOMS_HEART", "ENTITY_IT_LIVES"}, {adds = true})
+        boss({"ENTITY_THE_HAUNT"}, {adds = true, far = true, burst = true})
         boss({"ENTITY_MEGA_SATAN", "ENTITY_MOTHER", "ENTITY_BEAST", "ENTITY_DOGMA"},
             {adds = true, far = true, burst = true})
         boss({"ENTITY_SATAN", "ENTITY_MONSTRO2", "ENTITY_BLOAT", "ENTITY_KRAMPUS"},
