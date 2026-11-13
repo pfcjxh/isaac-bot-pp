@@ -4,7 +4,7 @@ return function(B)
     local game = B.game
     local json = B.json
 
-    B.VERSION = "0.6.6"
+    B.VERSION = "0.6.10"
     B.CELL = 40
 
     -- Settings persisted with mod:SaveData. The F8 menu (panel.lua) edits them; presets.lua

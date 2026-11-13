@@ -283,10 +283,14 @@ return function(B)
     -- Slot machines, fortune tellers and shell games pay out loot for coins, so
     -- they are loot targets too. Blood donation / hell game cost hearts and the
     -- key master needs a key, so those are filtered out.
+    -- SlotVariant values (the old constants were off by the beggar/devil-beggar entries and
+    -- made the bot gamble at the wrong machines).
     local SLOT_MACHINE = 1
     local FORTUNE_TELLING = 3
-    local SHELL_GAME = 4
-    local KEY_MASTER = 6
+    local BEGGAR = 4
+    local DEVIL_BEGGAR = 5
+    local SHELL_GAME = 6
+    local KEY_MASTER = 7
     local SAFE_SLOTS = {
         [SLOT_MACHINE] = true,
         [FORTUNE_TELLING] = true,
@@ -296,13 +300,19 @@ return function(B)
 
     function I.slotValue(e, p, ctx)
         local variant = e.Variant
+        if variant == BEGGAR then
+            -- Pay coins until the item shows up; stop at 12 payments or under 10 coins.
+            local key = "s" .. B.hash(e)
+            local paid = (B.st.beggar and B.st.beggar[key]) or 0
+            if paid >= 12 or count(p, "GetNumCoins") < 10 then return nil end
+            return 6
+        end
+        if variant == DEVIL_BEGGAR then return nil end
         if not SAFE_SLOTS[variant] then return nil end
-
         if variant == KEY_MASTER then
             if count(p, "GetNumKeys") < 1 then return nil end
             return 2
         end
-
         -- Coins are worth more in the shop: only gamble what is clearly spare.
         if count(p, "GetNumCoins") < 12 then return nil end
         return 2
@@ -331,22 +341,6 @@ return function(B)
         end
         for _, entry in pairs(groups) do out[#out + 1] = entry end
 
-        -- Beggars: pay coins until they hand over the item. Worth it when rich, and the small
-        -- spike strip in front is accepted (the route may hurt).
-        local beg = B.try(function() return EntityType.ENTITY_BEGGAR end)
-        if beg then
-            local begs = B.try(function()
-                return Isaac.FindByType(beg, -1, -1, false, false) end) or {}
-            for _, e in ipairs(begs) do
-                local key = "g" .. B.hash(e)
-                local paid = (B.st.beggar and B.st.beggar[key]) or 0
-                if e.Variant == 0 and paid < 12 and not B.isBlacklisted(key)
-                    and count(p, "GetNumCoins") >= 10 then
-                    out[#out + 1] = {e = e, value = 6, key = key, beggar = true}
-                end
-            end
-        end
-
         -- slot machines are not pickups: scan them separately
         local slots = B.try(function()
             return Isaac.FindByType(EntityType.ENTITY_SLOT, -1, -1, false, false) end) or {}
@@ -355,7 +349,8 @@ return function(B)
             if not B.isBlacklisted(key) then
                 local value = I.slotValue(e, p, ctx)
                 if value then
-                    out[#out + 1] = { e = e, value = value, key = key }
+                    out[#out + 1] = { e = e, value = value, key = key,
+                        beggar = (e.Variant == BEGGAR) }
                 end
             end
         end

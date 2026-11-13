@@ -980,8 +980,11 @@ return function(B)
             -- key, boarded, or not a real door): stop pushing and forget it for a while.
             if R.doorKey ~= key then R.doorKey, R.doorTick = key, B.st.tick end
             if B.st.tick - (R.doorTick or B.st.tick) > 60 then
-                B.blacklist(key, 1800)
-                B.event("door_closed", {slot = d.slot, room = B.st.room, locked = d.locked or false})
+                -- Not enterable: never come back to this door or this room this floor.
+                B.blacklist(key, 1e9)
+                if d.room then B.st.badRooms[d.room.li] = B.st.tick + 1e9 end
+                B.event("door_closed", {slot = d.slot, room = B.st.room,
+                    target = d.room and d.room.gi or -1, locked = d.locked or false})
                 R.doorKey = nil
                 return nil
             end

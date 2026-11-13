@@ -335,15 +335,19 @@ return function(B)
     -- visited and doors not blacklisted.
     function F.anyExitDoor()
         local best, bestScore
+        local p = B.player()
         for _, d in ipairs(F.doors()) do
             if d.target and d.target >= 0 and not d.locked and d.open ~= false then
-                local s = 0
-                if B.isBlacklisted("door" .. d.slot .. ":" .. B.st.room) then s = s + 10 end
-                if d.room and SKIP[d.room.type] then s = s + 5 end
-                local desc = d.room and F.desc(d.room)
-                if desc and (desc.VisitedCount or 0) > 0 then s = s + 1 end
-                if d.room and d.room.type == RT.ROOM_CURSE and not F.curseOk(B.player()) then s = s + 40 end
-                if not bestScore or s < bestScore then best, bestScore = d, s end
+                local key = "door" .. d.slot .. ":" .. B.st.room
+                local bad = d.room and (B.st.badRooms[d.room.li] or 0) > B.st.tick
+                if not B.isBlacklisted(key) and not bad then
+                    local s = 0
+                    if d.room and SKIP[d.room.type] then s = s + 5 end
+                    local desc = d.room and F.desc(d.room)
+                    if desc and (desc.VisitedCount or 0) > 0 then s = s + 1 end
+                    if d.room and d.room.type == RT.ROOM_CURSE and not F.curseOk(p) then s = s + 40 end
+                    if not bestScore or s < bestScore then best, bestScore = d, s end
+                end
             end
         end
         return best
