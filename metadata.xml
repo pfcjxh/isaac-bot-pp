@@ -3,5 +3,5 @@
   <name>Isaac Bot PP</name>
   <directory>isaac_bot</directory>
   <description>Offline single-player autopilot prototype: heuristic navigation, combat, projectile avoidance, pickups and a keyboard GUI</description>
-  <version>0.6.10</version>
+  <version>0.6.11</version>
 </metadata>
