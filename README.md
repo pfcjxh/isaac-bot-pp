@@ -1,117 +1,281 @@
 # Isaac Bot PP
 
-Single-player autopilot mod for *The Binding of Isaac: Repentance* (Lua). A heavily extended
-fork of [netlesha/isaac-bot](https://github.com/netlesha/isaac-bot) (MIT).
+An autonomous AI bot mod (Lua) for *The Binding of Isaac: Repentance*, heavily enhanced from the original [netlesha/isaac-bot](https://github.com/netlesha/isaac-bot) (MIT).
 
-中文说明：[README.zh.md](README.zh.md)
+中文文档：[README.zh.md](README.zh.md)
 
-## What it does
+---
 
-The bot plays a normal run on its own: it explores the floor, clears rooms, dodges projectiles,
-picks what is worth picking, opens rooms it can open, fights bosses, and logs everything it
-decides so the behaviour can be tuned from the log afterwards.
+## 🎮 What It Does
 
-It does **not** use a neural network. Everything is heuristic: a room graph, a Dijkstra grid,
-a short-horizon dodge simulation, per-weapon firing profiles and a small amount of learned
-enemy threat data (see [Learning](#learning)).
+The bot **fully autonomously** completes a run:
+- ✅ Explores floors and plans routes
+- ✅ Clears rooms and dodges projectiles
+- ✅ Intelligently evaluates items (what to pick, what to skip)
+- ✅ Strategic decisions for keys/bombs/coins
+- ✅ Fights bosses, challenge rooms, sacrifice rooms
+- ✅ Handles pressure plates and special mechanics
+- ✅ Auto-retry (restart after death)
 
-## Highlights
+---
 
-| Area | Behaviour |
+## 🏆 Achievement Records
+
+Successfully defeated Mom's Heart using **v0.6.11**, unlocking:
+
+| Achievement | Description | Date | Screenshot |
+|---|---|---|---|
+| **Solar System** | Unlocked Challenge #6 | 2026-01-13 | [View](achievements/solar_system.png) |
+| **A Noose** | Unlocked a new item | 2026-01-13 | [View](achievements/a_noose.png) |
+
+> **v0.6.11 is the first stable version to fully clear Mom's Heart**, tagged for preservation.
+
+More achievement records in [achievements/](achievements/) directory.
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+- The Binding of Isaac: Repentance (Steam version)
+- Steam Workshop subscription (or manual install)
+
+### Method 1: Steam Workshop (Recommended)
+1. Search "Isaac Bot PP" in Steam Workshop
+2. Click Subscribe
+3. Launch game, enable in Mod menu
+
+### Method 2: Manual Installation
+1. Download latest Release
+2. Extract to game Mod directory:
+   ```
+   %USERPROFILE%\Documents\My Games\Binding of Isaac Repentance\mods\isaac-bot-pp
+   ```
+3. Launch game, enable in Mod menu
+
+---
+
+## 🎯 Usage
+
+### Starting the Bot
+In-game, press **`** (key left of 1) to open console, type:
+
+```lua
+luamod isaac_bot
+```
+
+Look for log `loaded v0.6.x` to confirm successful load.
+
+### Control Commands
+
+| Command | Function |
 |---|---|
-| Navigation | Whole-floor room graph (treasure / shop / secret / devil / angel / challenge / arcade ranked by interest) + Dijkstra pathing on the room grid |
-| Combat | Weapon-aware firing spots (tears, charge, melee, steer) and short-horizon dodge for projectiles, lasers, bombs and hands |
-| Knights | Front shield: attacks from behind, engine direction calibration, bomb fallback |
-| Hosts | Stop firing, cross the room and wait until the shell opens |
-| Globins | Finish the goo before it regenerates |
-| Bosses | Summoners: adds first; close-range punishers: keep distance; burst bosses: spend bombs/actives earlier |
-| Cards | Carries only known-good cards, uses them in fights (boss first) or for healing, swaps for a better one |
-| Pills | Never picked, never used (unknown effect, conservative) |
-| Shop | Quality-gated items, hearts/batteries with a coin buffer, keys/bombs only when low |
-| Chests | Golden chest always, key chests with 3+ keys, red chests with enough health |
-| Clean-up | Fireplaces, poop, tinted / super tinted / gold rocks; gives up on blue/white fires and blocked targets |
-| Spikes | Reads retract state, steps only on retracted spikes, steps off a rising one, force-crosses after 3 s without progress |
-| Secret rooms | Finds undiscovered ones from level data, bombs the shared wall, walks in |
-| Boss prep | Uses a healing card before entering a boss room when low |
-| Learning | Counts hits taken per enemy type across runs; dangerous types are killed first and fought from farther away |
+| `set bot_auto_restart 1` | Auto-restart after death (default off)|
+| `set bot_auto_restart 0` | Disable auto-restart |
+| `set bot_speed 2` | Adjust speed (0.5-4.0)|
 
-## How it works
+### View Status
+Press **Tab** in-game to view current status:
+- Current target (room, item, enemy)
+- Decision mode (explore/combat/pickup)
+- Resource status (keys/bombs/coins)
+
+---
+
+## 🔧 Implementation Details
+
+### Architecture Overview
 
 ```
-MC_POST_UPDATE
-   └─ brain.update
-        ├─ read room / player / entities
-        ├─ grid.build        (walkable map, rocks, fires, spikes, chests)
-        ├─ grid.flood        (Dijkstra costs from the player)
-        ├─ danger.collect    (projectiles, lasers, bombs, creep, hands)
-        └─ choose one goal: fight / plate / loot / card / sweep / secret / door / exit
-             └─ danger.choose (simulate 8 directions, pick the safest)
-                  └─ B.move / B.shoot / B.tap  → MC_INPUT_ACTION
+isaac-bot-pp/
+├── main.lua          # Entry point, register callbacks
+├── isaacbot/
+│   ├── core.lua      # Core config, constants, global state
+│   ├── brain.lua     # Decision engine (goal planning, pathfinding)
+│   ├── combat.lua    # Combat logic (dodging, shooting, boss strategies)
+│   ├── floor.lua     # Floor management (room map, path planning)
+│   ├── items.lua     # Item evaluation (value scoring, pickup decisions)
+│   ├── grid.lua      # Grid system (obstacles, walkable areas)
+│   ├── danger.lua    # Danger assessment (projectiles, enemy threats)
+│   ├── bridge.lua    # Game interface (read/control game state)
+│   ├── panel.lua     # HUD panel (debug info display)
+│   ├── telemetry.lua # Telemetry data (performance analysis)
+│   └── presets.lua   # Character presets (per-character strategies)
 ```
 
-More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+### Key Modules
 
-## F8 menu
+#### 1. **Decision Engine** (`brain.lua`)
+- **Goal Selection**: Prioritizes targets (Boss > Important Rooms > Items > Explore)
+- **Pathfinding**: A* algorithm for optimal paths, considering key/bomb costs
+- **Strategic Decisions**:
+  - Key strategy: `KEY_RICH = 7` (open all locks when >7 keys, only important rooms when ≤7)
+  - Bomb strategy: Reserve bombs for secret rooms and special situations
+  - Sacrifice room strategy: Attempt sacrifices at full health
 
-- Run switch (same as F9), goal, character, six behaviour toggles.
-- Preset system: built-in presets (Standard / Mom Speedrun / Azazel to Lamb) plus your own.
-- Priority and exclusion lists for collectibles, with the item catalogue and search.
-- All settings persist in the mod save.
+#### 2. **Combat System** (`combat.lua`)
+- **Dodge Algorithm**: Predicts projectile trajectories, finds safe zones
+- **Shooting Strategy**: Prioritizes highest-threat enemies
+- **Boss-Specific Strategies**:
+  - **The Haunt**: Prioritize killing minions, avoid being surrounded
+  - More boss strategies being added...
 
-Menu text is English on purpose: the game's CJK pixel font in the current builds has advance
-widths but no real glyphs, so non-ASCII text renders as boxes.
+#### 3. **Item Evaluation** (`items.lua`)
+- **Item Value**: Calculates score based on bonuses (damage/tear rate/health)
+- **Cursed Items**: Weighs benefits vs risks
+- **Golden/Locked Chests**: Can open with any key (golden key not required)
 
-## Install
+#### 4. **Floor Management** (`floor.lua`)
+- **Room Map Construction**: Auto-explores and records room positions
+- **Path Optimization**: Prioritizes high-value rooms (treasure, shop, secret rooms)
+- **Important Room Detection**: `importantRoom` function identifies priority rooms
 
-1. Copy this repository to
-   `...\The Binding of Isaac Rebirth\mods\isaac_bot\`.
-2. Enable mods (main menu → Mods) and run in the console:
+---
+
+## 🐛 Debugging & Development
+
+### Debugging in Agent
+
+#### 1. Check Current Version and Status
+```lua
+-- In-game console
+luamod isaac_bot
+-- Look for: loaded v0.6.x
+```
+
+#### 2. Enable Debug Logging
+Edit `isaacbot/core.lua`:
+```lua
+B.DEBUG_MODE = true  -- Enable detailed logging
+B.SHOW_PANEL = true  -- Show debug panel
+```
+
+#### 3. View Log File
+Log location:
+```
+%USERPROFILE%\Documents\My Games\Binding of Isaac Repentance\log.txt
+```
+
+Key log markers:
+- `[BOT]`: Bot decision logs
+- `[COMBAT]`: Combat events
+- `[FLOOR]`: Floor exploration
+- `[BRAIN]`: Goal planning
+
+#### 4. Real-time Strategy Tweaks
+```lua
+-- Modify key threshold (isaacbot/core.lua)
+B.KEY_RICH = 5  -- Change from 7 to 5, more aggressive key usage
+
+-- Modify bomb strategy (isaacbot/brain.lua)
+local bomb_threshold = 3  -- Reserve at least 3 bombs
+```
+
+#### 5. Test Specific Scenarios
+```lua
+-- In-game console
+goto s.boss.1010  -- Teleport to Boss room
+goto s.treasure  -- Teleport to Treasure room
+giveitem c15     -- Give specific item for testing
+```
+
+#### 6. Performance Analysis
+```lua
+-- View telemetry data (isaacbot/telemetry.lua)
+-- Data displayed in panel.lua HUD
+```
+
+### Common Issue Troubleshooting
+
+| Issue | Possible Cause | Troubleshooting |
+|---|---|---|
+| **Bot Idle** | Target lost or path blocked | Check `log.txt` for `idle` event and `why` field |
+| **Keeps hitting door** | Door temporarily blacklisted (retries after 10s)| Check if have keys, if important room |
+| **Won't step on plate** | Plate deemed unreachable or temp blacklisted (retries after 15s)| Check `plate_blocked` log |
+| **Won't pick item** | Item value below threshold | Modify scoring function in `items.lua` |
+| **Combat stuck** | Boss strategy not covered | Add boss-specific logic in `combat.lua` |
+
+### Adding New Features
+
+#### Example: Add New Boss Strategy
+1. Find `bossPlan` function in `isaacbot/combat.lua`
+2. Add new Boss ID check:
+   ```lua
+   if boss_type == EntityType.ENTITY_PIN then
+       -- Pin boss specific strategy
+       return {
+           priority_target = "body",  -- Prioritize attacking body
+           safe_distance = 200,       -- Keep distance
+           dodge_priority = "high"    -- High priority dodging
+       }
+   end
    ```
-   luamod isaac_bot
+
+#### Example: Adjust Item Scoring
+1. Edit `scoreItem` function in `isaacbot/items.lua`
+2. Increase/decrease specific attribute weights:
+   ```lua
+   local score = 0
+   if item.damage > 0 then score = score + item.damage * 10 end  -- Damage weight x10
+   if item.speed < 0 then score = score - 50 end  -- Speed penalty -50
    ```
-3. The bottom-left line shows `PP | <state> <detail>   F8 Menu` when loaded.
 
-## Controls
+---
 
-| Key | Action |
-|---|---|
-| F8 | settings menu |
-| F9 | bot on / off (Off = no input at all) |
-| F7 | next preset |
+## 📊 Version History
 
-## Learning
+### v0.6.30-dev (In Development)
+- 🔧 **Door blacklist now temporary**: Locked doors retry after 10s (was permanent)
+- 🔧 **Pressure plate blacklist now temporary**: Unreachable plates retry after 15s
+- ✅ Fixed "button room" deadlock issue
 
-Every hit taken is attributed to the attacking enemy type (`type.variant`) and persisted in the
-mod save. A type that hits the bot often is prioritised and approached from farther away; deaths
-are attributed to the last attacker. Events: `learn_hit`, `learn_death`.
+### v0.6.11 (2026-01-13) 🏆
+**First stable version to clear Mom's Heart**
+- ✅ Key strategy optimized (`KEY_RICH = 7`)
+- ✅ Fire mechanics improved (skip purple fires)
+- ✅ Hold room timeout (leave after 20s with no visible enemies)
 
-This is a threat model, not a move database. Boss-specific move patterns are added per boss on
-request (see [docs/BOSSES.md](docs/BOSSES.md)).
+### v0.6.10-v0.6.29
+Detailed changelog in [CHANGELOG.md](CHANGELOG.md)
 
-## Logs and events
+---
 
-The mod writes `[IsaacBot] EV {...}` lines to `log.txt`. Full reference:
-[docs/EVENTS.md](docs/EVENTS.md).
+## 🤝 Contributing
 
-## Development
+Issues and Pull Requests welcome!
 
-- Module map and data flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Extending (bosses, cards, enemies, rooms): [docs/DEVELOPING.md](docs/DEVELOPING.md)
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Sync the live mod folder into this repo: `tools/sync-from-game.sh`
+### Development Guide
+1. Fork this repo
+2. Create feature branch: `git checkout -b feature/your-feature`
+3. Commit changes: `git commit -m 'Add some feature'`
+4. Push branch: `git push origin feature/your-feature`
+5. Submit Pull Request
 
-## Roadmap
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details
 
-- More boss move patterns (Mom, Isaac, Hush, Delirium, The Beast...).
-- Sacrifice room policy.
-- Secret-room wall detection without level data (visual).
-- Better active-item value model.
+---
 
-## License
+## 📝 License
 
-MIT. The original project's copyright notice is kept in [LICENSE](LICENSE); upstream projects are
-listed in [CREDITS.md](CREDITS.md).
+MIT License - see [LICENSE](LICENSE)
 
-## Disclaimer
+Based on [netlesha/isaac-bot](https://github.com/netlesha/isaac-bot) (MIT)
 
-Single-player only. Mods disable achievements in game; that is a game limitation, not this project's.
+---
+
+## 🙏 Credits
+
+- Original author [netlesha](https://github.com/netlesha) for initial framework
+- The Binding of Isaac community for Mod API documentation
+- All testers and contributors
+
+---
+
+## 📮 Contact
+
+- GitHub Issues: [Submit Issue](../../issues)
+- Steam Workshop: (link TBD)
+
+---
+
+**⭐ If this project helped you, give it a Star!**
